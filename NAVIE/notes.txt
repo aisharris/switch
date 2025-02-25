@@ -1,0 +1,3 @@
+Ensure string is being appended to knowledge.csv or change the usage in the "model_name_rate_min"
+
+Wtf is going on with model dict when you need to pass the img through it: how to not hardcode and adapt it
