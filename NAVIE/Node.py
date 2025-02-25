@@ -72,6 +72,20 @@ def stop_process_in_terminal(file):
     else:
         print("Error:", error.decode())
 
+# gets all the models that are loaded: .pt files in dir
+# to add new models, add files
+@app.get("/api/models")
+async def get_models():
+    try:
+        models = []
+        for filename in os.listdir("."):
+            if filename.endswith(".pt"):
+                models.append(filename[:-3]) # Remove the .pt
+        return {"models": models}
+    except Exception as e:
+        print("Error getting models:", str(e))
+        raise HTTPException(status_code=500, detail="Error getting models")
+
 @app.post("/api/upload")
 async def upload_files(zipFile: UploadFile = File(None), csvFile: UploadFile = File(...),  approch: str = Form(...), folder_location: str = Form(None)):
 
@@ -293,30 +307,25 @@ async def latest_log_data():
 
 
 @app.post("/api/changeKnowledge")
-async def change_knowledge(data: Dict[str, str]):
-
+async def change_knowledge(data: Dict[str, list[Dict[str, str]]]):
     try:
+        models_data = data["models"]
 
-        row1 = [ '0',data['yolov5nLower'],data['yolov5nUpper']]
-        row2 = [ '1',data['yolov5sLower'],data['yolov5sUpper']]
-        row3 = [ '2',data['yolov5mLower'],data['yolov5mUpper']]
-        row4 = [ '3',data['yolov5lLower'],data['yolov5lUpper']]
-        row5 = [ '4',data['yolov5xLower'],data['yolov5xUpper']]
-
-        print(row1,row2,row3,row4,row5)
-        with open('knowledge.csv', 'w') as file:
+        with open('knowledge.csv', 'w', newline='') as file:  # Add newline='' to prevent extra blank lines
             writer = csv.writer(file)
-            writer.writerow(row1)
-            writer.writerow(row2)
-            writer.writerow(row3)
-            writer.writerow(row4)
-            writer.writerow(row5)
-        return {"message" : "Changed knowledge file "}
-       
-    except Exception as e:
-        print("Error stoping:", str(e))
-        raise HTTPException(status_code=500, detail="An error occurred updating knowledge file")
+            for model in models_data:
+                row = []
+                #add model name as string
+                row.append(f"{model["name"]}")
+                row.append(model["lower"])  # Use model name directly
+                row.append(model["upper"])  # Use model name directly
+                writer.writerow(row)
 
+        return {"message": "Changed knowledge file"}
+
+    except Exception as e:
+        print("Error updating knowledge file:", str(e))
+        raise HTTPException(status_code=500, detail="An error occurred updating knowledge file")
 
 @app.post("/useNaiveKnowledge")
 async def useNaive_knowledge():

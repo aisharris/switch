@@ -21,17 +21,12 @@ class Planner():
         #check's which model's thershold range is input rate within and accordingly determines the action.
         logger.info(    {'Component': "Planner" , "Action": "Generating the adaptation plan" } )
 
-        if( in_rate >= array[0][1] and in_rate <= array[0][2]):
-            action = 1
-        elif( in_rate >= array[1][1] and in_rate <= array[1][2] ):
-            action = 2
-        elif( in_rate >= array[2][1] and in_rate <= array[2][2] ):
-            action = 3
-        elif( in_rate >= array[3][1] and in_rate <= array[3][2] ):
-            action = 4
-        elif ( in_rate >= array[4][1]  and in_rate <= array[4][2]  ) : #and in_rate < array[4][2]
-            action = 5
-        else:
+        # set action to idx + 1 for idx corresponding to appropriate model
+        for i in range(len(array)):
+            if ( in_rate >= array[i][1] and in_rate <= array[i][2]):
+                action = i + 1
+        
+        if action == 0:
             logger.error(    {'Component': "Planner" , "Action": "No adaptation plan generated" }  ) 
             return
         

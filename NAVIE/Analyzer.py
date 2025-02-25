@@ -16,20 +16,13 @@ class Analyzer():
         array = df.to_numpy()
         self.thresholds = {}
 
-        self.thresholds["yolov5n_rate_min"] = array[0][1]
-        self.thresholds["yolov5n_rate_max"] = array[0][2]
-
-        self.thresholds["yolov5s_rate_min"] = array[1][1]
-        self.thresholds["yolov5s_rate_max"] = array[1][2]
-
-        self.thresholds["yolov5m_rate_min"] = array[2][1]
-        self.thresholds["yolov5m_rate_max"] = array[2][2]
-
-        self.thresholds["yolov5l_rate_min"] = array[3][1]
-        self.thresholds["yolov5l_rate_max"] = array[3][2]
-
-        self.thresholds["yolov5x_rate_min"] = array[4][1]
-        self.thresholds["yolov5x_rate_max"] = array[4][2]
+        # knowledge.csv format: model_name, rate_min, rate_max
+        # add thresholds of models to dict: threshold[model_name_rate_min] = min_threshold
+        for i in range(len(array)):
+            str_min = array[i][0] + "_rate_min"
+            str_max = array[i][0] + "_rate_max"
+            self.thresholds[str_min] = array[i][1]
+            self.thresholds[str_max] = array[i][2]
 
         self.count = 0
 

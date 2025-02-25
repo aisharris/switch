@@ -1,7 +1,8 @@
 from ultralytics import YOLO
+
+models = {}
 if __name__ == '__main__':
 
-    models = {}
     for m in {'yolov5n', 'yolov5s', 'yolov5m', 'yolov5l', 'yolov5x'}:
         #models[m] = torch.hub.load('ultralytics/ultralytics', m, force_reload=False, device='cpu')
         z = m + ".pt"
