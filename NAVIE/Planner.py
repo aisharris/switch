@@ -15,7 +15,7 @@ class Planner():
         
         df = pd.read_csv('knowledge.csv', header=None)
         array = df.to_numpy()
-
+        model = ""
         in_rate = self.input_rate
 
         #check's which model's thershold range is input rate within and accordingly determines the action.
@@ -25,6 +25,7 @@ class Planner():
         for i in range(len(array)):
             if ( in_rate >= array[i][1] and in_rate <= array[i][2]):
                 action = i + 1
+                model = array[i][0]
         
         if action == 0:
             logger.error(    {'Component': "Planner" , "Action": "No adaptation plan generated" }  ) 
@@ -32,4 +33,4 @@ class Planner():
         
         #creates Executor object and call's to perform action.
         exe_obj = Executor()
-        exe_obj.perform_action(action)
+        exe_obj.perform_action(action, model)

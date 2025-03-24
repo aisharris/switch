@@ -1,20 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect  } from 'react';
 import JSZip from 'jszip';
 import Dashboard from './Dashboard';
 import User_approch from './User_approch'
 import User_approch_MAPE_K from './User_Approch_MAPE_K'
+
 const Home = () => {
   const [selectedZipFile, setSelectedZipFile] = useState(null);
   const [selectedCSVFile, setSelectedCSVFile] = useState(null);
   const [showDashBoard ,  setShowDashBoard] = useState(false);
   const [stopProcessing , setstopProcessing] = useState(false);
   const [selectedOption, setSelectedOption] = useState('');
+  const [availableModels, setAvailableModels] = useState([]);
+  const [models, setModels] = useState([]);
   const [ID, setID] = useState('')
   const [loc, setLoc] = useState('')
   const handleZipFileChange = (event) => {
     const file = event.target.files[0];
     setSelectedZipFile(file);
   };
+
+  useEffect(() => {
+    // Fetch the available models from the backend
+    const fetchModels = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/models'); // New API endpoint
+        if (response.ok) {
+          const modelData = await response.json();
+          setAvailableModels(modelData.models); // Set the models from the response
+
+          // Initialize models state with fetched model names
+          const initialModels = modelData.models.map(modelName => ({
+            name: modelName,
+            lower: "",
+            upper: ""
+          }));
+          setModels(initialModels);
+        } else {
+          console.error('Failed to fetch models.');
+        }
+      } catch (error) {
+        console.error('Error fetching models:', error);
+      }
+    };
+
+    fetchModels(); // Call the function to fetch models
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   const handleCSVFileChange = (event) => {
     const file = event.target.files[0];
@@ -83,6 +113,10 @@ const Home = () => {
     } catch (error) {
       console.error('Error during file upload:', error);
     }
+  };
+
+  const handleModelsUpdate = (updatedModels) => {
+    setModels(updatedModels);
   };
 
   const stopProcess = async () => {
@@ -200,7 +234,6 @@ const Home = () => {
           />
         </div>
 
-
         <div className="mb-3">
           <label htmlFor="csvFileInput" className="form-label">
             Upload a csv file contaning inter arrival rate data.
@@ -242,18 +275,23 @@ const Home = () => {
             <option value="AdaMLs">AdaMLS</option>
             <option value="Try Your Own">Modify NAIVE</option>
             <option value="Write Your Own MAPE-K">Upload MAPE-K files</option>
-            <option value="yolov5n">Nano Model</option>
-            <option value="yolov5s">Small Model</option>
-            <option value="yolov5m">Medium Model</option>
-            <option value="yolov5l">Large Model</option>
-            <option value="yolov5x">Xlarge Model</option>
+
+            {availableModels.map((model) => (
+                <option key={model} value={model}>
+                  {model}
+                </option>
+              ))}
           </select>
         </div>
         
         {selectedOption === "Try Your Own" &&
 
         <div className="mb-3">
-            <User_approch/>
+            <User_approch 
+            models={models} 
+            availableModels={availableModels} // Pass availableModels as prop
+            onModelsUpdate={handleModelsUpdate} 
+          />
         </div>
         }
 

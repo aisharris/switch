@@ -9,6 +9,8 @@ from elasticsearch import Elasticsearch
 from typing import Dict
 import csv
 from get_data import write_csv, write_json
+import platform
+import sys
 
 es = Elasticsearch(['localhost'])
 app = FastAPI()
@@ -41,12 +43,39 @@ def run_as_background(command):
     except Exception as e:
         print("Couldn't run processes in terminal: ", str(e))
 
+# def run_in_new_terminal(command):
+#     try:
+#         subprocess.Popen(['gnome-terminal', '--', 'bash', '-c', command])
+#     except Exception as e:
+#         print("new repo")
+#         print("Couldn't run processes in terminal: ", str(e))
+
 def run_in_new_terminal(command):
     try:
-        subprocess.Popen(['gnome-terminal', '--', 'bash', '-c', command])
+        # Simple background execution
+        process = subprocess.Popen(['bash', '-c', command], 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE)
+        print(f"Started process with PID: {process.pid}")
     except Exception as e:
-        print("Couldn't run processes in terminal: ", str(e))
+        print("\n\n\n\n ---------not fixed----------- \n\n\n\n")
+        print("Couldn't run process: ", str(e))
 
+# in case you run into issues with bg process above:
+# def run_in_new_terminal(command):
+#     # Try different terminal emulators
+#     terminals = ['gnome-terminal', 'xterm', 'konsole', 'terminator', 'kitty', 'alacritty']
+    
+#     for terminal in terminals:
+#         try:
+#             subprocess.Popen([terminal, '--', 'bash', '-c', command])
+#             return  # Exit after successful launch
+#         except FileNotFoundError:
+#             continue
+    
+#     # If no terminal emulator is found, run in background
+#     print("No terminal emulator found. Running in background.")
+#     subprocess.Popen(['bash', '-c', command])
 
 def stop_proccess():
     try: 
@@ -315,8 +344,7 @@ async def change_knowledge(data: Dict[str, list[Dict[str, str]]]):
             writer = csv.writer(file)
             for model in models_data:
                 row = []
-                #add model name as string
-                row.append(f"{model["name"]}")
+                row.append(model["name"])
                 row.append(model["lower"])  # Use model name directly
                 row.append(model["upper"])  # Use model name directly
                 writer.writerow(row)

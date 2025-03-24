@@ -1,195 +1,149 @@
 import React, { useState } from "react";
 import axios from "axios";
-function User_approch() {
-  const [yolov5xLower, setYolov5xLower] = useState("");
-  const [yolov5xUpper, setYolov5xUpper] = useState("");
-  const [yolov5lLower, setYolov5lLower] = useState("");
-  const [yolov5lUpper, setYolov5lUpper] = useState("");
-  const [yolov5mLower, setYolov5mLower] = useState("");
-  const [yolov5mUpper, setYolov5mUpper] = useState("");
-  const [yolov5sLower, setYolov5sLower] = useState("");
-  const [yolov5sUpper, setYolov5sUpper] = useState("");
-  const [yolov5nLower, setYolov5nLower] = useState("");
-  const [yolov5nUpper, setYolov5nUpper] = useState("");
-  const [finalized, setfinalized] = useState(false)
-  const changeKnowledge= async () =>{
-    try{
-    const response = await axios.post('http://localhost:3001/apichangeKnowledge', {
-        yolov5xLower,
-        yolov5xUpper,
-        yolov5lLower,
-        yolov5lUpper,
-        yolov5mLower,
-        yolov5mUpper,
-        yolov5sLower,
-        yolov5sUpper,
-        yolov5nLower,
-        yolov5nUpper
-      });
-      alert("'Knowledge finalized")
-      setfinalized(true)
-      console.log(response.data); // Handle the response as needed
 
+function User_approach({ availableModels, onModelsUpdate }) {
+  const [localModels, setLocalModels] = useState([]); // Start with an empty array
+  const [finalized, setFinalized] = useState(false);
+  const [selectedModel, setSelectedModel] = useState(""); // For the model selection dropdown
+
+  const addModel = () => {
+    if (selectedModel) { // Only add if a model is selected
+      const modelExists = localModels.some(model => model.name === selectedModel);
+      if(!modelExists){
+        setLocalModels([
+          ...localModels,
+          { name: selectedModel, lower: "", upper: "" },
+        ]);
+        setSelectedModel(""); // Reset the dropdown after adding
+      }
+      else{
+        alert("Model already added")
+      }
+    }
+  };
+
+  const deleteModel = (index) => {
+    const updatedModels = [...localModels];
+    updatedModels.splice(index, 1); // Remove the model at the specified index
+    setLocalModels(updatedModels);
+    onModelsUpdate(updatedModels);
+  };
+
+  const handleModelChange = (index, field, value) => {
+    const updatedModels = [...localModels];
+    updatedModels[index][field] = value;
+    setLocalModels(updatedModels);
+    onModelsUpdate(updatedModels);
+  };
+
+  const changeKnowledge = async () => {
+    try {
+      const response = await axios.post(
+        "http://localhost:3001/api/changeKnowledge",
+        {
+          models: localModels,
+        }
+      );
+      alert("Knowledge finalized");
+      setFinalized(true);
+      console.log(response.data);
     } catch (error) {
       console.error(error);
     }
   };
+
+  const availableModelsToAdd = availableModels.filter(
+    (model) => !localModels.find((addedModel) => addedModel.name === model)
+  );
+
   return (
     <div>
-      {!finalized && <div>
-      <div className="row">
-        <div className="col-md-6">
-          <label className="small" htmlFor="inputYolov5xLower">
-            Lower bound of response time for Xlarge model.
-          </label>
-          <input
-            className="form-control"
-            id="inputYolov5xLower"
-            type="text"
-            placeholder="Lower bound for yolov5x model."
-            value={yolov5xLower}
-            onChange={(e) => setYolov5xLower(e.target.value)}
-          />
-        </div>
-        <div className="col-md-6">
-          <label className="small" htmlFor="inputYolov5xUpper">
-          Upper bound of response time for Xlarge model
-          </label>
-          <input
-            className="form-control"
-            id="inputYolov5xUpper"
-            type="text"
-            placeholder="Upper bound for yolov5x model."
-            value={yolov5xUpper}
-            onChange={(e) => setYolov5xUpper(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="row mt-3">
-        <div className="col-md-6">
-          <label className="small" htmlFor="inputYolov5lLower">
-          Lower bound of response time for Large model
-          </label>
-          <input
-            className="form-control"
-            id="inputYolov5lLower"
-            type="text"
-            placeholder="Lower bound for yolov5l model."
-            value={yolov5lLower}
-            onChange={(e) => setYolov5lLower(e.target.value)}
-          />
-        </div>
-        <div className="col-md-6">
-          <label className="small" htmlFor="inputYolov5lUpper">
-          Upper bound of response time for Large model
-          </label>
-          <input
-            className="form-control"
-            id="inputYolov5lUpper"
-            type="text"
-            placeholder="Upper bound for yolov5l model."
-            value={yolov5lUpper}
-            onChange={(e) => setYolov5lUpper(e.target.value)}
-          />
-        </div>
-      </div>
-    
-        
-      <div className="row mt-3">
-        <div className="col-md-6">
-          <label className="small" htmlFor="inputYolov5mLower">
-          Lower bound of response time for Medium model
-          </label>
-          <input
-            className="form-control"
-            id="inputYolov5mLower"
-            type="text"
-            placeholder="Lower bound for yolov5m model."
-            value={yolov5mLower}
-            onChange={(e) => setYolov5mLower(e.target.value)}
-          />
-        </div>
-        <div className="col-md-6">
-          <label className="small" htmlFor="inputYolov5mUpper">
-          Upper bound of response time for Medium model
-          </label>
-          <input
-            className="form-control"
-            id="inputYolov5mUpper"
-            type="text"
-            placeholder="Upper bound for yolov5m model."
-            value={yolov5mUpper}
-            onChange={(e) => setYolov5mUpper(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="row mt-3">
-        <div className="col-md-6">
-          <label className="small" htmlFor="inputYolov5sLower">
-          Lower bound of response time for Small model
-          </label>
-          <input
-            className="form-control"
-            id="inputYolov5sLower"
-            type="text"
-            placeholder="Lower bound for yolov5s model."
-            value={yolov5sLower}
-            onChange={(e) => setYolov5sLower(e.target.value)}
-          />
-        </div>
-        <div className="col-md-6">
-          <label className="small" htmlFor="inputYolov5sUpper">
-          Upper bound of response time for Small model
-          </label>
-          <input
-            className="form-control"
-            id="inputYolov5sUpper"
-            type="text"
-            placeholder="Upper bound for yolov5s model."
-            value={yolov5sUpper}
-            onChange={(e) => setYolov5sUpper(e.target.value)}
-          />
-        </div>
-
-        <div className="row mt-3">
-            <div className="col-md-6">
-            <label className="small" htmlFor="inputYolov5nLower">
-            Lower bound of response time for Nano model
-            </label>
-            <input
-                className="form-control"
-                id="inputYolov5nLower"
-                type="text"
-                placeholder="Lower bound for yolov5n model."
-                value={yolov5nLower}
-                onChange={(e) => setYolov5nLower(e.target.value)}
-            />
+      {!finalized && (
+        <div>
+          {localModels.map((model, index) => (
+            <div key={index} className="model-config">
+              {/* <h3>Model {index + 1}</h3> */}
+              <div className="row mt-2">
+                <div className="col-md-4">
+                  <select
+                    id={`modelName${index}`}
+                    className="form-control"
+                    value={model.name}
+                    onChange={(e) =>
+                      handleModelChange(index, "name", e.target.value)
+                    }
+                  >
+                    {/* <option value="">Select a model</option> */}
+                    {availableModels.map((availableModel) => (
+                      <option key={availableModel} value={availableModel}>
+                        {availableModel}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-md-4">
+                  <input
+                    type="text"
+                    className="form-control"
+                    id={`lower${index}`}
+                    placeholder="Lower bound"
+                    value={model.lower}
+                    onChange={(e) =>
+                      handleModelChange(index, "lower", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="col-md-4">
+                  <input
+                    type="text"
+                    className="form-control"
+                    id={`upper${index}`}
+                    placeholder="Upper bound"
+                    value={model.upper}
+                    onChange={(e) =>
+                      handleModelChange(index, "upper", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="col-md-1"> {/* Add a column for the delete button */}
+                  <button
+                    className="btn btn-danger btn-sm mt-2" // Style as a small button
+                    onClick={() => deleteModel(index)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="col-md-6">
-            <label className="small" htmlFor="inputYolov5nUpper">
-            Upper bound of response time for Nano model
-            </label>
-            <input
-                className="form-control"
-                id="inputYolov5nUpper"
-                type="text"
-                placeholder="Upper bound for yolov5n model."
-                value={yolov5nUpper}
-                onChange={(e) => setYolov5nUpper(e.target.value)}
-            />
-            </div>
+          ))}
+
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            className="form-control mt-2"
+          >
+            <option value="">Select a model to add</option>
+            {availableModelsToAdd.map((model) => (
+              <option key={model} value={model}>
+                {model}
+              </option>
+            ))}
+          </select>
+
+          <button className="btn mt-3 btn-primary" onClick={addModel}>
+            Add Model
+          </button>
+
+          <button
+            className="btn mt-3 ml-2 btn-danger"
+            onClick={changeKnowledge}
+          >
+            Finalize Knowledge
+          </button>
         </div>
-      </div>
-
-
-      <button className="btn mt-3 small btn-danger" onClick={changeKnowledge}>
-          Final Knowledge
-        </button>
-        </div>}
+      )}
     </div>
   );
 }
 
-export default User_approch;
+export default User_approach;
