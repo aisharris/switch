@@ -12,6 +12,10 @@ from get_data import write_csv, write_json
 import platform
 import sys
 
+# Modifications Start Here
+from VideoToImgZip import video_to_images
+# Modifications End Here
+
 es = Elasticsearch(['localhost'])
 app = FastAPI()
 sys_approch = "NAIVE"
@@ -116,7 +120,7 @@ async def get_models():
         raise HTTPException(status_code=500, detail="Error getting models")
 
 @app.post("/api/upload")
-async def upload_files(zipFile: UploadFile = File(None), csvFile: UploadFile = File(...),  approch: str = Form(...), folder_location: str = Form(None)):
+async def upload_files(zipFile: UploadFile = File(None), videoFile: UploadFile = File(None), csvFile: UploadFile = File(...),  approch: str = Form(...), folder_location: str = Form(None)):
 
     global sys_approch
     try:
@@ -139,8 +143,34 @@ async def upload_files(zipFile: UploadFile = File(None), csvFile: UploadFile = F
         unzip_dir = "unzipped"
         print(f"folder location is ->{folder_location}.")
 
-      
-        if(zipFile is not None):
+        # Modifications Start Here
+        if (videoFile is not None):
+            # Save the Uplaoded video file to Uploads folder
+            video_path = os.path.join(upload_dir, videoFile.filename)
+            with open(video_path, "wb") as vf:
+                shutil.copyfileobj(videoFile.file, vf)
+
+            # print("Ehhh")
+            video_path = os.path.join(upload_dir, videoFile.filename)
+            output_folder = '{}_frames'.format(video_path.split('.')[0])
+            zip_name = '{}.zip'.format(output_folder)
+
+            video_to_images(video_path, output_folder=output_folder, zip_name=zip_name)
+
+            zip_path = zip_name
+
+            shutil.rmtree(unzip_dir, ignore_errors=True)
+            os.makedirs(unzip_dir, exist_ok=True)
+
+            with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                zip_ref.extractall(unzip_dir)
+
+            print("Folder unzipped successfully.")
+            IMAGES_FOLDER = "unzipped/"+videoFile.filename
+            IMAGES_FOLDER = IMAGES_FOLDER[:-4]
+
+        elif(zipFile is not None):
+        # Modifications End Here
             zip_path = os.path.join(upload_dir, zipFile.filename)
             
             with open(zip_path, "wb") as zf:

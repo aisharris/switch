@@ -14,6 +14,7 @@ const Home = () => {
   const [models, setModels] = useState([]);
   const [ID, setID] = useState('')
   const [loc, setLoc] = useState('')
+  const [selectedVideoFile, setSelectedVideoFile] = useState(null)
   const handleZipFileChange = (event) => {
     const file = event.target.files[0];
     setSelectedZipFile(file);
@@ -55,6 +56,11 @@ const Home = () => {
     setLoc(event.target.value);
     console.log(loc)
   }
+  const handleVideoFileChange = (event) => {
+    const file = event.target.files[0];
+    setSelectedVideoFile(file);
+    console.log(file)
+  };
   const handleIdChange = (event) => {
     // Update the ID state with the new value from the input field
     setID(event.target.value);
@@ -62,7 +68,7 @@ const Home = () => {
   };
 
   const handleUpload = async () => {
-    if ((!selectedZipFile && loc=='') || !selectedCSVFile) {
+    if ((!selectedZipFile && !selectedVideoFile && loc==='') || !selectedCSVFile) {
       return;
     }
 
@@ -85,6 +91,10 @@ const Home = () => {
       if (selectedZipFile) {
         formData.append('zipFile', selectedZipFile);
         console.log('Zip file added to foem data')
+      }
+      if (selectedVideoFile) {
+        formData.append('videoFile', selectedVideoFile);
+        console.log('Video file added to form data')
       }
       formData.append('csvFile', selectedCSVFile);
       formData.append('approch', selectedOption);
@@ -231,6 +241,19 @@ const Home = () => {
             className="form-control"
             id="textInput"
             onChange={handleLocationChange}
+          />
+        </div>
+
+        <div className="mb-3">
+          <label htmlFor="videoFileInput" className="form-label">
+            Or, upload a video file.
+          </label>
+          <input
+            type="file"
+            className="form-control"
+            id="videoFileInput"
+            accept="video/*"
+            onChange={handleVideoFileChange}
           />
         </div>
 
