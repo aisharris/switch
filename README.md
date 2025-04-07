@@ -43,7 +43,7 @@ The system comprises distinct components, including a frontend written in React,
 - Install [Docker Engine](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) as standalone binaries.
 - Minimum free space of 7 GB.
 - The system is designed for Linux environments. If you do not have access to a Linux system, you can either utilize a virtual Linux machine or employ a Docker image of a Linux environment.
-- If using virtual enviorment for set-up, pre install virtualenv.
+- If using virtual environment for set-up, pre install virtualenv.
   
 ## Installation
 
@@ -69,11 +69,11 @@ cd SWITCH
 ## Setting up Elastic Search and Kibana 
 Start the **docker engine** on your system.
 
-Start Elasticsearch and Kibana containers using Docker Compose with image version 7.9.1, usign command:
+Start Elasticsearch and Kibana containers using Docker Compose with image version 7.9.1, using the command:
 
 
 ```bash
-docker-compose up
+sudo docker compose up
 ```
 
 > Wait until ready, this may take time to install depending on the internet connection.
@@ -141,7 +141,7 @@ Ensure `docker-compose.yml` is running:
 
 If not running, run following command from directory `SWITCH`
 ```bash
-docker-compose up
+sudo docker compose up
 ```
 
 **If using virtual enviorment**:
@@ -332,8 +332,8 @@ Ensure that the code files adhere to the specified guidelines for seamless integ
 
 </details>
 
-## Stoping the Application
-Stoping the application, it is necessary to terminate the associated processes executing in each of the three designated terminals. This involves the cessation of the 'Docker-compose' process in the first terminal, the termination of the 'Node.py' script in the second terminal, and the halting of the 'frontend' process in the third terminal. This can be done by pressign `Ctrl+C` in each terminal
+## Stopping the Application
+To stop the application, the associated processes executing in each of the three designated terminals must be stopped. This involves the cessation of the 'Docker-compose' process in the first terminal, the termination of the 'Node.py' script in the second terminal, and the halting of the 'frontend' process in the third terminal. This can be done by pressing `Ctrl+C` in each terminal
 
 
 
