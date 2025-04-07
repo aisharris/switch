@@ -152,7 +152,7 @@ async def upload_files(zipFile: UploadFile = File(None), videoFile: UploadFile =
 
             # print("Ehhh")
             video_path = os.path.join(upload_dir, videoFile.filename)
-            output_folder = '{}_frames'.format(video_path.split('.')[0])
+            output_folder = '{}'.format(video_path.split('.')[0])
             zip_name = '{}.zip'.format(output_folder)
 
             video_to_images(video_path, output_folder=output_folder, zip_name=zip_name)

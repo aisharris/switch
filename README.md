@@ -126,7 +126,7 @@ npm install
 
 
 ```bash
-cd NAVIE
+cd NAIVE
 
 pip install -r requirements.txt
 
@@ -152,7 +152,7 @@ source venv/bin/activate
 ```
 
 
-Run the backend first for the application from the directory `SWITCH/NAVIE`:
+Run the backend first for the application from the directory `SWITCH/NAIVE`:
 
 ```
 python3 Node.py
@@ -338,12 +338,12 @@ Stoping the application, it is necessary to terminate the associated processes e
 
 
 ## Using the final result's 
-If you have downloaded the data for an experiment, the metric's data is stored in a CSV file: `NAVIE/Exported_metrics/exported-data-metrics_{id}` and the logs for the experiment are stored in a JSON file: `NAVIE/Exported_logs/exported-data-logs_{id}`.
+If you have downloaded the data for an experiment, the metric's data is stored in a CSV file: `NAIVE/Exported_metrics/exported-data-metrics_{id}` and the logs for the experiment are stored in a JSON file: `NAIVE/Exported_logs/exported-data-logs_{id}`.
  
 ## Filtering based on classes and confidence score:
 
 
-This code snippet, to be modified in the `process.py` file located in the `NAVIE` directory, demonstrates the process of filtering object detection results based on class IDs and confidence levels corresponding to the COCO dataset. Users can specify desired classes by adding class filters within the provided loop. Examples for detecting specific classes, such as 'crowd' (class ID 0) and 'dog' (class ID 16), are provided in the comments of the code.
+This code snippet, to be modified in the `process.py` file located in the `NAIVE` directory, demonstrates the process of filtering object detection results based on class IDs and confidence levels corresponding to the COCO dataset. Users can specify desired classes by adding class filters within the provided loop. Examples for detecting specific classes, such as 'crowd' (class ID 0) and 'dog' (class ID 16), are provided in the comments of the code.
 
 ```
 # Loop through detected objects and filter based on confidence and class ID
