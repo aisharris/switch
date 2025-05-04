@@ -43,7 +43,7 @@ The system comprises distinct components, including a frontend written in React,
 - Install [Docker Engine](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) as standalone binaries.
 - Minimum free space of 7 GB.
 - The system is designed for Linux environments. If you do not have access to a Linux system, you can either utilize a virtual Linux machine or employ a Docker image of a Linux environment.
-- If using virtual enviorment for set-up, pre install virtualenv.
+- If using virtual environment for set-up, pre install virtualenv.
   
 ## Installation
 
@@ -69,11 +69,11 @@ cd SWITCH
 ## Setting up Elastic Search and Kibana 
 Start the **docker engine** on your system.
 
-Start Elasticsearch and Kibana containers using Docker Compose with image version 7.9.1, usign command:
+Start Elasticsearch and Kibana containers using Docker Compose with image version 7.9.1, using the command:
 
 
 ```bash
-docker-compose up
+sudo docker compose up
 ```
 
 > Wait until ready, this may take time to install depending on the internet connection.
@@ -126,7 +126,7 @@ npm install
 
 
 ```bash
-cd NAVIE
+cd NAIVE
 
 pip install -r requirements.txt
 
@@ -141,7 +141,7 @@ Ensure `docker-compose.yml` is running:
 
 If not running, run following command from directory `SWITCH`
 ```bash
-docker-compose up
+sudo docker compose up
 ```
 
 **If using virtual enviorment**:
@@ -152,7 +152,7 @@ source venv/bin/activate
 ```
 
 
-Run the backend first for the application from the directory `SWITCH/NAVIE`:
+Run the backend first for the application from the directory `SWITCH/NAIVE`:
 
 ```
 python3 Node.py
@@ -332,18 +332,18 @@ Ensure that the code files adhere to the specified guidelines for seamless integ
 
 </details>
 
-## Stoping the Application
-Stoping the application, it is necessary to terminate the associated processes executing in each of the three designated terminals. This involves the cessation of the 'Docker-compose' process in the first terminal, the termination of the 'Node.py' script in the second terminal, and the halting of the 'frontend' process in the third terminal. This can be done by pressign `Ctrl+C` in each terminal
+## Stopping the Application
+To stop the application, the associated processes executing in each of the three designated terminals must be stopped. This involves the cessation of the 'Docker-compose' process in the first terminal, the termination of the 'Node.py' script in the second terminal, and the halting of the 'frontend' process in the third terminal. This can be done by pressing `Ctrl+C` in each terminal
 
 
 
 ## Using the final result's 
-If you have downloaded the data for an experiment, the metric's data is stored in a CSV file: `NAVIE/Exported_metrics/exported-data-metrics_{id}` and the logs for the experiment are stored in a JSON file: `NAVIE/Exported_logs/exported-data-logs_{id}`.
+If you have downloaded the data for an experiment, the metric's data is stored in a CSV file: `NAIVE/Exported_metrics/exported-data-metrics_{id}` and the logs for the experiment are stored in a JSON file: `NAIVE/Exported_logs/exported-data-logs_{id}`.
  
 ## Filtering based on classes and confidence score:
 
 
-This code snippet, to be modified in the `process.py` file located in the `NAVIE` directory, demonstrates the process of filtering object detection results based on class IDs and confidence levels corresponding to the COCO dataset. Users can specify desired classes by adding class filters within the provided loop. Examples for detecting specific classes, such as 'crowd' (class ID 0) and 'dog' (class ID 16), are provided in the comments of the code.
+This code snippet, to be modified in the `process.py` file located in the `NAIVE` directory, demonstrates the process of filtering object detection results based on class IDs and confidence levels corresponding to the COCO dataset. Users can specify desired classes by adding class filters within the provided loop. Examples for detecting specific classes, such as 'crowd' (class ID 0) and 'dog' (class ID 16), are provided in the comments of the code.
 
 ```
 # Loop through detected objects and filter based on confidence and class ID

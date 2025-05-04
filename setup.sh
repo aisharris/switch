@@ -10,8 +10,8 @@ npm install
 
 # Setting up Backend: Model loader, MAPE-K, Locust a load tester
 echo "Setting up Backend"
-echo "Changing directory to NAVIE..."
-cd NAVIE
+echo "Changing directory to NAIVE..."
+cd NAIVE
 
 
 echo "Installing Python requirements..."
