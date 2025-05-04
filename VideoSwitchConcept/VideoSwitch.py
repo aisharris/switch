@@ -235,6 +235,11 @@ class AdaptiveYOLOProcessor:
         print(f"Target output FPS: {self.output_fps}")
         print(f"Total frames: {total_frames}")
 
+        # If target output fps is > input fps, then we break/return
+        if (self.output_fps > input_fps):
+            print(f"Input fps: {input_fps} of given video must be greater than target Output fps: {self.output_fps}")
+            return
+
         # Setup output video writer if needed
         out = None
         if output_path:
