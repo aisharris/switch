@@ -54,32 +54,32 @@ def run_as_background(command):
 #         print("new repo")
 #         print("Couldn't run processes in terminal: ", str(e))
 
-def run_in_new_terminal(command):
-    try:
-        # Simple background execution
-        process = subprocess.Popen(['bash', '-c', command], 
-                                   stdout=subprocess.PIPE, 
-                                   stderr=subprocess.PIPE)
-        print(f"Started process with PID: {process.pid}")
-    except Exception as e:
-        print("\n\n\n\n ---------not fixed----------- \n\n\n\n")
-        print("Couldn't run process: ", str(e))
+# def run_in_new_terminal(command):
+#     try:
+#         # Simple background execution
+#         process = subprocess.Popen(['bash', '-c', command], 
+#                                    stdout=subprocess.PIPE, 
+#                                    stderr=subprocess.PIPE)
+#         print(f"Started process with PID: {process.pid}")
+#     except Exception as e:
+#         print("\n\n\n\n ---------not fixed----------- \n\n\n\n")
+#         print("Couldn't run process: ", str(e))
 
 # in case you run into issues with bg process above:
-# def run_in_new_terminal(command):
-#     # Try different terminal emulators
-#     terminals = ['gnome-terminal', 'xterm', 'konsole', 'terminator', 'kitty', 'alacritty']
+def run_in_new_terminal(command):
+    # Try different terminal emulators
+    terminals = ['gnome-terminal', 'xterm', 'konsole', 'terminator', 'kitty', 'alacritty']
     
-#     for terminal in terminals:
-#         try:
-#             subprocess.Popen([terminal, '--', 'bash', '-c', command])
-#             return  # Exit after successful launch
-#         except FileNotFoundError:
-#             continue
+    for terminal in terminals:
+        try:
+            subprocess.Popen([terminal, '--', 'bash', '-c', command])
+            return  # Exit after successful launch
+        except FileNotFoundError:
+            continue
     
-#     # If no terminal emulator is found, run in background
-#     print("No terminal emulator found. Running in background.")
-#     subprocess.Popen(['bash', '-c', command])
+    # If no terminal emulator is found, run in background
+    print("No terminal emulator found. Running in background.")
+    subprocess.Popen(['bash', '-c', command])
 
 def stop_proccess():
     try: 
@@ -152,7 +152,7 @@ async def upload_files(zipFile: UploadFile = File(None), videoFile: UploadFile =
 
             # print("Ehhh")
             video_path = os.path.join(upload_dir, videoFile.filename)
-            output_folder = '{}_frames'.format(video_path.split('.')[0])
+            output_folder = '{}'.format(video_path.split('.')[0])
             zip_name = '{}.zip'.format(output_folder)
 
             video_to_images(video_path, output_folder=output_folder, zip_name=zip_name)
@@ -166,7 +166,7 @@ async def upload_files(zipFile: UploadFile = File(None), videoFile: UploadFile =
                 zip_ref.extractall(unzip_dir)
 
             print("Folder unzipped successfully.")
-            IMAGES_FOLDER = "unzipped/"+videoFile.filename
+            IMAGES_FOLDER = "unzipped/uploads/"+videoFile.filename
             IMAGES_FOLDER = IMAGES_FOLDER[:-4]
 
         elif(zipFile is not None):
@@ -374,6 +374,7 @@ async def change_knowledge(data: Dict[str, list[Dict[str, str]]]):
             writer = csv.writer(file)
             for model in models_data:
                 row = []
+                print("\n\nWriting to knowledge model name:", model["name"])
                 row.append(model["name"])
                 row.append(model["lower"])  # Use model name directly
                 row.append(model["upper"])  # Use model name directly

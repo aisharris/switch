@@ -33,7 +33,7 @@ class Monitor():
                     model_name = array[0][0]
                     monitor_dict["model"] = model_name
 
-                    if (model_name != 'yolov5n' and model_name != 'yolov5s' and model_name != 'yolov5l' and model_name != 'yolov5m' and model_name != 'yolov5x'):
+                    if (model_name != 'yolov5nu' and model_name != 'yolov5su' and model_name != 'yolov5lu' and model_name != 'yolov5mu' and model_name != 'yolov5xu'):
                         continue
 
                     logger.data(monitor_dict)

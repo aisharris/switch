@@ -34,12 +34,14 @@ async def predict( image: UploadFile = File(...) ):
              
         input_rate+=1
         im_bytes = await image.read()
-        x = time.time()
+        current_time = time.time()
+        print(f"\n\nCreating image: {total_in}")
         filename = f"images/queue{total_in}.csv"
 
         f = open(filename, "w")
         writer = csv.writer(f)
-        writer.writerow([x])
+        # image csv files have the time processed as the first row
+        writer.writerow([current_time])
         writer.writerow(im_bytes)
         f.close()
         

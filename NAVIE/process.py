@@ -83,6 +83,18 @@ def process_row(im_bytes, total_time):
 
 
             current_cpu = psutil.cpu_percent(interval=None)
+
+            #! originally updates it by 1, but with frame dropping in video, update by drop_rate
+            """
+            if video:
+                with open('drop_rate.csv', 'r') as f:
+                    reader = csv.reader(f)
+                    drop_rate = list(reader)[0][0]
+
+                total_processed += drop_rate
+            else:
+                total_processed += 1
+            """
             total_processed += 1
 
             # detection = response.pandas().xyxy[0]
@@ -106,6 +118,8 @@ def process_row(im_bytes, total_time):
             current_time = t - current_time #model processsing time
             total_time = t - total_time # total time take by image to finally output
             absolute_time = t - global_total_time 
+
+            #! for video processing, the current time is the metric used to switch, so we upload that
 
             # writes the logs in a log.csv file.
             # print("To write in log file.\n")
@@ -174,7 +188,7 @@ def start_processing():
                 total_processed += 1
 
         elif len(rows) == 1:
-        
+            #! not sure if this has to be updated for video
             total_processed += 1
         else:
             logger.error("File not exist")
@@ -194,7 +208,7 @@ if __name__ == '__main__':
     models = {}
     # ideally the only place model names are input. 
     # when adding a model, ensure model_name.pt exists in the current directory
-    for m in {'yolov5n', 'yolov5s', 'yolov5m', 'yolov5l', 'yolov5x'}:
+    for m in {'yolov5nu', 'yolov5su', 'yolov5mu', 'yolov5lu', 'yolov5xu'}:
         z = m + ".pt"
         models[m] = YOLO(z)
     logger.info(    {'Component': "Process" , "Action": "Model's loaded ready to start processing" }  ) 

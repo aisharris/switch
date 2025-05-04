@@ -14,6 +14,11 @@ class Analyzer():
         df = pd.read_csv('knowledge.csv', header=None)
 
         array = df.to_numpy()
+
+        #log array
+        logger.info({"array": array})
+        print("\n\n\nKnowledge to numpy:", array)
+
         self.thresholds = {}
 
         # knowledge.csv format: model_name, rate_min, rate_max
@@ -24,6 +29,9 @@ class Analyzer():
             self.thresholds[str_min] = array[i][1]
             self.thresholds[str_max] = array[i][2]
 
+            # print(f"{self.thresholds[str_min]=}")
+            # print(f"{self.thresholds[str_max]=}")
+
         self.count = 0
 
     def perform_analysis(self, monitor_dict):
@@ -32,16 +40,21 @@ class Analyzer():
 
         input_rate = monitor_dict["input_rate"]
         model = monitor_dict["model"]
+        print(f"{model=}")
 
         str_min = model + "_rate_min"
         str_max = model + "_rate_max"
+
+        print(f"{str_min=}")
+        print(f"{str_max=}")
         current_time = time.time()
 
         # get's the minimum and maximum threshold values for the current working model.
 
-        min_val = self.thresholds.get(str_min)
-        max_val = self.thresholds.get(str_max)
+        min_val = self.thresholds[str_min]
+        max_val = self.thresholds[str_max]
 
+        logger.info({"max_val": max_val, "input_rate": input_rate})
         if ((max_val >= input_rate and min_val <= input_rate) == False):
 
             if (self.time == -1):
