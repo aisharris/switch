@@ -14,6 +14,7 @@ import sys
 
 # Modifications Start Here
 from VideoToImgZip import video_to_images
+from VideoSwitch import AdaptiveYOLOProcessor
 # Modifications End Here
 
 es = Elasticsearch(['localhost'])
@@ -150,24 +151,50 @@ async def upload_files(zipFile: UploadFile = File(None), videoFile: UploadFile =
             with open(video_path, "wb") as vf:
                 shutil.copyfileobj(videoFile.file, vf)
 
+            # time.sleep(1)
+
             # print("Ehhh")
             video_path = os.path.join(upload_dir, videoFile.filename)
+
             output_folder = '{}'.format(video_path.split('.')[0])
-            zip_name = '{}.zip'.format(output_folder)
 
-            video_to_images(video_path, output_folder=output_folder, zip_name=zip_name)
+            os.makedirs(output_folder, exist_ok=True)
+            base_filename = os.path.splitext(videoFile.filename)[0]
+            output_video_path = os.path.join(output_folder, f"{base_filename}_output.mp4")
+            input_video_path = video_path
 
-            zip_path = zip_name
+            # Define target FPS (TODO: Make this configurable)
+            target_output_fps = 16.0
 
-            shutil.rmtree(unzip_dir, ignore_errors=True)
-            os.makedirs(unzip_dir, exist_ok=True)
+            command = (
+                f'python3 VideoSwitch.py '
+                f'--input "{input_video_path}" '
+                f'--output "{output_video_path}" '
+                f'--fps {target_output_fps}'
+            )
 
-            with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                zip_ref.extractall(unzip_dir)
+            print("Launching video processor script in background...")
 
-            print("Folder unzipped successfully.")
-            IMAGES_FOLDER = "unzipped/"+videoFile.filename
-            IMAGES_FOLDER = IMAGES_FOLDER[:-4]
+            # process = subprocess.Popen(command, cwd="NAIVE")
+            # running_processes.append(process)
+
+            run_in_terminal(command)
+
+            # zip_name = '{}.zip'.format(output_folder)
+
+            # video_to_images(video_path, output_folder=output_folder, zip_name=zip_name)
+
+            # zip_path = zip_name
+
+            # shutil.rmtree(unzip_dir, ignore_errors=True)
+            # os.makedirs(unzip_dir, exist_ok=True)
+
+            # with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            #     zip_ref.extractall(unzip_dir)
+
+            # print("Folder unzipped successfully.")
+            # IMAGES_FOLDER = "unzipped/"+videoFile.filename
+            # IMAGES_FOLDER = IMAGES_FOLDER[:-4]
 
         elif(zipFile is not None):
         # Modifications End Here
@@ -191,38 +218,39 @@ async def upload_files(zipFile: UploadFile = File(None), videoFile: UploadFile =
             IMAGES_FOLDER = folder_location
         # Perform additional logic with the unzipped folder here
 
-        # Move the CSV file to the unzipped folder
-        csv_dest_path = os.path.join(unzip_dir, csvFile.filename)
-        shutil.move(csv_path, csv_dest_path)
-        print("CSV file saved successfully.")
+        if not videoFile:
+            # Move the CSV file to the unzipped folder
+            csv_dest_path = os.path.join(unzip_dir, csvFile.filename)
+            shutil.move(csv_path, csv_dest_path)
+            print("CSV file saved successfully.")
 
-        CSV_FILE =  "unzipped/" + csvFile.filename
-        
-        print(CSV_FILE , IMAGES_FOLDER)
+            CSV_FILE =  "unzipped/" + csvFile.filename
+            
+            print(CSV_FILE , IMAGES_FOLDER)
 
-        #API to accept user reequests
-        run_in_terminal('python3 App.py')
-        time.sleep(0.5)
-        #Locust to send Request
-        run_in_new_terminal(f'export CSV_FILE="{CSV_FILE}" && export IMAGES_FOLDER="{IMAGES_FOLDER}" && locust -f Request_send.py --headless  --host=http://localhost:5000/v1 --users 1 --spawn-rate 1')
-        #to start monitoring
-        if(approch == "AdaMLs"):   
-            print("RUunning monitor_ada.py---------------------")
-            run_in_terminal('python3 monitor_ada.py', working_directory='AdaMLs')
-        elif(approch == "NAIVE" or approch == "Try Your Own"):
-            print("RUunning monitor.py---------------------")
-            run_in_terminal('python3 monitor.py')
-        elif(approch == "Write Your Own MAPE-K"):
-            print("Montior from director: ",monitor_directory)
-            run_in_terminal('python3 monitor.py', working_directory=f'{monitor_directory}')
-          
-        else:
-            with open('model.csv', 'w') as file:
-                writer = csv.writer(file)
-                writer.writerow([approch])
-        #upload data to ES
-        run_in_terminal('python3 logs_to_es.py')
-        run_in_terminal('python3 metrics_to_es.py')
+            #API to accept user reequests
+            run_in_terminal('python3 App.py')
+            time.sleep(0.5)
+            #Locust to send Request
+            run_in_new_terminal(f'export CSV_FILE="{CSV_FILE}" && export IMAGES_FOLDER="{IMAGES_FOLDER}" && locust -f Request_send.py --headless  --host=http://localhost:5000/v1 --users 1 --spawn-rate 1')
+            #to start monitoring
+            if(approch == "AdaMLs"):   
+                print("RUunning monitor_ada.py---------------------")
+                run_in_terminal('python3 monitor_ada.py', working_directory='AdaMLs')
+            elif(approch == "NAIVE" or approch == "Try Your Own"):
+                print("RUunning monitor.py---------------------")
+                run_in_terminal('python3 monitor.py')
+            elif(approch == "Write Your Own MAPE-K"):
+                print("Montior from director: ",monitor_directory)
+                run_in_terminal('python3 monitor.py', working_directory=f'{monitor_directory}')
+            
+            else:
+                with open('model.csv', 'w') as file:
+                    writer = csv.writer(file)
+                    writer.writerow([approch])
+            #upload data to ES
+            run_in_terminal('python3 logs_to_es.py')
+            run_in_terminal('python3 metrics_to_es.py')
         return {"message": "Files uploaded and processed successfully."}
 
     except Exception as e:
