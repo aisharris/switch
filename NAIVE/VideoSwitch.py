@@ -5,6 +5,86 @@ import numpy as np
 from pathlib import Path
 from collections import deque
 from ultralytics import YOLO
+import argparse
+import os
+import sys
+from elasticsearch import Elasticsearch
+import datetime
+
+ES_HOST = "localhost"
+ES_PORT = 9200
+VIDEO_METRICS_INDEX = "video_processing_metrics"
+ADAPTATION_LOG_INDEX = "video_adaptation_logs"
+
+
+# Define the mappings for video metrics
+VIDEO_METRICS_MAPPING = {
+    "mappings": {
+        "properties": {
+            "timestamp": {"type": "date"},
+            "frame_number": {"type": "integer"},
+            "model_name": {"type": "keyword"},
+            "model_processing_time": {"type": "float"},
+            "current_fps": {"type": "float"},
+            "num_detections": {"type": "integer"},
+            "avg_confidence": {"type": "float"},
+            "target_frame_time": {"type": "float"}
+            # Add other relevant metrics like CPU/memory if easily obtainable
+        }
+    }
+}
+
+ADAPTATION_LOG_MAPPING = {
+    "mappings": {
+        "properties": {
+            "timestamp": {"type": "date"},
+            "event_type": {"type": "keyword"},
+            "old_model": {"type": "keyword"},
+            "new_model": {"type": "keyword"},
+            "reason": {"type": "text"},
+            "avg_processing_time_before": {"type": "float"},
+            "target_frame_time": {"type": "float"}
+            # Add other fields relevant to adaptation logs
+        }
+    }
+}
+
+es_client = None
+try:
+    es_client = Elasticsearch([{'host': ES_HOST, 'port': ES_PORT}])
+    if not es_client.ping():
+        raise ValueError("Connection Error: Cannot connect to Elasticsearch!")
+    print("VideoSwitch: Connected to Elasticsearch.")
+
+    # Ensure indices exist (create if not) - Basic mapping example
+    if not es_client.indices.exists(index=VIDEO_METRICS_INDEX):
+        # Add more fields as needed
+        mapping = {"mappings": {"properties": {"timestamp": {"type": "date"}}}}
+        es_client.indices.create(index=VIDEO_METRICS_INDEX, body=VIDEO_METRICS_MAPPING)
+        print(f"VideoSwitch: Created index '{VIDEO_METRICS_INDEX}'")
+
+    if not es_client.indices.exists(index=ADAPTATION_LOG_INDEX):
+        # Add more fields as needed
+        mapping = {"mappings": {"properties": {"timestamp": {"type": "date"}}}}
+        es_client.indices.create(index=ADAPTATION_LOG_INDEX, body=ADAPTATION_LOG_MAPPING)
+        print(f"VideoSwitch: Created index '{ADAPTATION_LOG_INDEX}'")
+
+except Exception as e:
+    print(
+        f"VideoSwitch: WARNING - Failed to connect or setup Elasticsearch: {e}. Logging disabled.")
+    es_client = None
+
+
+def log_to_es(client, index_name, data_dict):
+    if client:
+        try:
+            data_dict['timestamp'] = datetime.datetime.now(
+            ).isoformat()  # Add timestamp
+            client.index(index=index_name, body=data_dict)
+            print(f"VideoSwitch: Logged data to Elasticsearch index '{index_name}': {data_dict}")
+        except Exception as e:
+            print(
+                f"VideoSwitch: WARNING - Failed to log to Elasticsearch index '{index_name}': {e}")
 
 
 class AdaptiveYOLOProcessor:
@@ -134,11 +214,24 @@ class AdaptiveYOLOProcessor:
 
         # If we have enough headroom (processing at 80% of target or better)
         if avg_processing_time <= self.target_frame_time * 0.8:
+            old_model_name = self.current_model_name
             print(
                 f"Upgrading model from {self.current_model_name} to {next_model_name}")
             self.current_model_idx = next_model_idx
             self.current_model_name = next_model_name
+
             self.processing_times.clear()  # Reset timing data
+
+            # Log Metrics
+            log_data = {
+                "event_type": "model_upgrade",
+                "old_model": old_model_name,
+                "new_model": next_model_name,
+                "reason": "performance_headroom_available",
+                "avg_processing_time_before": avg_processing_time,
+                "target_frame_time": self.target_frame_time
+            }
+            log_to_es(es_client, ADAPTATION_LOG_INDEX, log_data)
             return True
 
         return False
@@ -159,13 +252,27 @@ class AdaptiveYOLOProcessor:
 
         # If we're taking more than 110% of our target time per frame
         if recent_avg > self.target_frame_time * 1.1 and self.current_model_idx > 0:
+            old_model_name = self.current_model_name
             new_model_idx = self.current_model_idx - 1
             new_model_name = self.model_names[new_model_idx]
             print(
                 f"Downgrading model from {self.current_model_name} to {new_model_name} due to performance constraints")
             self.current_model_idx = new_model_idx
             self.current_model_name = new_model_name
+
             self.processing_times.clear()  # Reset timing data
+
+            # Log Metrics
+            log_data = {
+                "event_type": "model_downgrade",
+                "old_model": old_model_name,
+                "new_model": new_model_name,
+                "reason": "target_fps_missed",
+                "avg_processing_time_before": recent_avg,
+                "target_frame_time": self.target_frame_time
+            }
+            log_to_es(es_client, ADAPTATION_LOG_INDEX, log_data)
+
             return True
 
         # self.processing_times.clear()
@@ -183,6 +290,7 @@ class AdaptiveYOLOProcessor:
             numpy.ndarray: Processed frame with detections
         """
         model = self.models[self.current_model_name]
+        model_used_for_frame = self.current_model_name
 
         # Print current model being used for this inference
         print(
@@ -199,6 +307,23 @@ class AdaptiveYOLOProcessor:
         current_fps = 1.0 / processing_time if processing_time > 0 else 0
         print(
             f"Frame {frame_number}: Inference time: {processing_time:.4f}s ({current_fps:.2f} FPS)")
+
+        # Log Metrics
+        confidences = results[0].boxes.conf.tolist()
+        num_detections = len(confidences)
+        avg_confidence = sum(confidences) / num_detections if num_detections > 0 else 0
+
+        frame_metrics = {
+            "frame_number": frame_number,
+            "model_name": model_used_for_frame,
+            "model_processing_time": processing_time,
+            "current_fps": current_fps,
+            "num_detections": num_detections,
+            "avg_confidence": avg_confidence, # Example additional metric
+            "target_frame_time": self.target_frame_time
+            # Add other relevant metrics like CPU/memory if easily obtainable
+        }
+        log_to_es(es_client, VIDEO_METRICS_INDEX, frame_metrics)
 
         # Check if we need to downgrade the model
         if len(self.processing_times) >= 5:  # Wait for some data to accumulate
@@ -237,8 +362,11 @@ class AdaptiveYOLOProcessor:
 
         # If target output fps is > input fps, then we break/return
         if (self.output_fps > input_fps):
-            print(f"Input fps: {input_fps} of given video must be greater than target Output fps: {self.output_fps}")
-            return
+            print(
+                f"Input fps: {input_fps} of given video must be greater than target Output fps: {self.output_fps}")
+            
+            self.output_fps = input_fps
+            self.target_frame_time = 1.0 / self.output_fps
 
         # Setup output video writer if needed
         out = None
@@ -324,6 +452,22 @@ class AdaptiveYOLOProcessor:
                       f"Current model: {self.current_model_name} | "
                       f"Average FPS: {avg_fps:.2f}")
 
+        end_process_time = time.time()
+        total_duration = end_process_time - start_time
+        overall_avg_fps = processed_count / total_duration if total_duration > 0 else 0
+        summary_log = {
+            "event_type": "processing_finished",
+            "input_video": input_path,
+            "output_video": output_path if output_path else "N/A",
+            "total_frames_in_video": total_frames,
+            "total_frames_processed": processed_count,
+            "final_model_used": self.current_model_name,
+            "target_output_fps": self.output_fps,
+            "processing_duration_seconds": total_duration,
+            "overall_average_fps": overall_avg_fps
+        }
+        log_to_es(es_client, ADAPTATION_LOG_INDEX, summary_log)
+
         cap.release()
         if out:
             out.release()
@@ -338,34 +482,72 @@ class AdaptiveYOLOProcessor:
 
 # Example usage
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Run Adaptive YOLO Video Processor")
+    parser.add_argument("--input", required=True,
+                        help="Path to the input video file.")
+    parser.add_argument("--output", required=True,
+                        help="Path for the output video file.")
+    parser.add_argument("--fps", type=float, required=True,
+                        help="Target output FPS.")
+    parser.add_argument("--test_frames", type=int, default=30,
+                        help="Number of frames for performance testing.")
+    parser.add_argument("--upgrade_interval", type=int, default=30,
+                        help="Interval in seconds to check for model upgrade.")
+
+    args = parser.parse_args()
+
+    print("--- Video Processor Script Started ---")
+    print(f"Input: {args.input}")
+    print(f"Output: {args.output}")
+    print(f"Target FPS: {args.fps}")
+
+
+    path = "uploads/video.mp4"  # Replace with your actual path
+    print("Check if path is args.input:")
+    if args.input != path:
+        print(f"Path is not args.input: {args.input}")
+        path = args.input
+    else:
+        print("Path is args.input")
+        path = args.input
+    print(f"Checking if file exists at: {path}")
+    if os.path.exists(path):
+        print("File exists.")
+        cap = cv2.VideoCapture(path)
+        if not cap.isOpened():
+            raise ValueError(f"Could not open video file with OpenCV: {path}")
+        else:
+            print("File opened successfully with OpenCV.")
+
     # Download Models
     yolov5n = YOLO("yolov5n.pt")
     yolov5s = YOLO("yolov5s.pt")
     yolov5m = YOLO("yolov5m.pt")
-    yolov5l = YOLO("yolov5l.pt")
-    yolov5x = YOLO("yolov5x.pt")
+    # yolov5l = YOLO("yolov5l.pt")
+    # yolov5x = YOLO("yolov5x.pt")
 
     # Define model paths - from smallest/fastest to largest/most accurate
     model_paths = {
         "yolov5n": "yolov5nu.pt",  # Nano
         "yolov5s": "yolov5su.pt",  # Small
         "yolov5m": "yolov5mu.pt",  # Medium
-        "yolov5l": "yolov5lu.pt",  # Large
-        "yolov5x": "yolov5xu.pt"   # XLarge
+        # "yolov5l": "yolov5lu.pt",  # Large
+        # "yolov5x": "yolov5xu.pt"   # XLarge
     }
 
     # Set desired output FPS
-    output_fps = 16
+    # output_fps = 16
 
     # Create processor
     processor = AdaptiveYOLOProcessor(
         model_paths=model_paths,
-        output_fps=output_fps,
-        test_frames=20,
+        output_fps=args.fps,
+        test_frames=30,
         upgrade_interval=30  # Try upgrading model every 30 seconds
     )
 
     # Process video
-    input_video = "input_video.mp4"
-    output_video = "output_video.mp4"
+    input_video = args.input
+    output_video = args.output
     processor.process_video(input_video, output_video)

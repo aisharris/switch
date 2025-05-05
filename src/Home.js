@@ -14,7 +14,9 @@ const Home = () => {
   const [models, setModels] = useState([]);
   const [ID, setID] = useState('')
   const [loc, setLoc] = useState('')
+  const [fps, setFPS] = useState('')
   const [selectedVideoFile, setSelectedVideoFile] = useState(null)
+  const isVideoUploaded = Boolean(selectedVideoFile);
   const handleZipFileChange = (event) => {
     const file = event.target.files[0];
     setSelectedZipFile(file);
@@ -61,6 +63,12 @@ const Home = () => {
     setSelectedVideoFile(file);
     console.log(file)
   };
+
+  const handleFPSChange=(event)=>{
+    setFPS(event.target.value);
+    console.log(fps)
+  }
+  
   const handleIdChange = (event) => {
     // Update the ID state with the new value from the input field
     setID(event.target.value);
@@ -101,8 +109,11 @@ const Home = () => {
       if (loc) {
         formData.append('folder_location', loc);
       }
+      if (fps) {
+        formData.append('out_fps', fps);
+      }
   
-      console.log(selectedOption, loc)
+      console.log(selectedOption, loc, fps)
       const response = await fetch('http://localhost:3001/api/upload', {
         method: 'POST',
         body: formData,
@@ -258,6 +269,19 @@ const Home = () => {
         </div>
 
         <div className="mb-3">
+          <label htmlFor="output fps" className="form-label">
+            Specify the output fps of the video. If output fps is greater than the input fps, it will be set to the input fps.
+          </label>
+          <input
+            type="text"
+            className="form-control"
+            id="fpsInput"
+            onChange={handleFPSChange}
+          />
+        </div>
+
+
+        <div className="mb-3">
           <label htmlFor="csvFileInput" className="form-label">
             Upload a csv file contaning inter arrival rate data.
           </label>
@@ -334,7 +358,7 @@ const Home = () => {
       <div>
         {showDashBoard && 
         <div>
-          <Dashboard/>
+          <Dashboard video_bool={isVideoUploaded}/>
           {!stopProcessing &&
           <button className="btn btn-primary" onClick={stopProcess}>
             Stop Process
