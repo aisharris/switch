@@ -13,6 +13,10 @@ from ultralytics import YOLO
 import argparse
 from elasticsearch import Elasticsearch, ElasticsearchException
 
+# sudo docker run --rm -it -p 8554:8554 bluenviron/mediamtx - Step 1
+# ffmpeg -re -stream_loop -1 -i trim.mp4 -c copy -f rtsp -rtsp_transport tcp rtsp://localhost:8554/mystream - Step 2
+# Each step in different terminals
+
 # --- Configuration ---
 ES_HOST = "localhost"
 ES_PORT = 9200

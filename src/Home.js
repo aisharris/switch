@@ -18,6 +18,9 @@ const Home = () => {
   const [selectedVideoFile, setSelectedVideoFile] = useState(null)
   const [activeTab, setActiveTab] = useState('images'); // <-- New state for tabs
   const isVideoUploaded = Boolean(selectedVideoFile);
+  const [rtspInUrl, setRtspInUrl] = useState('');
+  const [rtspOutUrl, setRtspOutUrl] = useState('');
+  const [rtspFps, setRtspFps] = useState('');
 
   const handleZipFileChange = (event) => {
     const file = event.target.files[0];
@@ -77,6 +80,18 @@ const Home = () => {
     console.log(ID)
   };
 
+  const handleRtspInUrlChange = (event) => {
+    setRtspInUrl(event.target.value);
+  };
+
+  const handleRtspOutUrlChange = (event) => {
+    setRtspOutUrl(event.target.value);
+  };
+
+  const handleRtspFpsChange = (event) => {
+    setRtspFps(event.target.value);
+  };
+
   const handleUpload = async () => {
     if (activeTab === 'images') {
       if ((!selectedZipFile && loc === '') || !selectedCSVFile) {
@@ -86,6 +101,11 @@ const Home = () => {
     } else if (activeTab === 'video') {
       if (!selectedVideoFile || !fps) {
         alert("For Video input, please provide a Video file AND the output FPS.");
+        return;
+      }
+    } else if (activeTab === 'streaming') {
+      if (!rtspInUrl || !rtspOutUrl || !rtspFps) {
+        alert("For Streaming input, please provide all three URLs and the FPS.");
         return;
       }
     }
@@ -98,7 +118,7 @@ const Home = () => {
     try {
       setShowDashBoard(true);
 
-      if (selectedZipFile) {
+      if (activeTab === 'images' && selectedZipFile) {
         const zip = new JSZip();
         await zip.loadAsync(selectedZipFile);
 
@@ -109,27 +129,34 @@ const Home = () => {
         });
       }
 
-
       const formData = new FormData();
-      if (selectedZipFile) {
-        formData.append('zipFile', selectedZipFile);
-        console.log('Zip file added to foem data')
+
+      // Add data based on active tab
+      if (activeTab === 'images') {
+        if (selectedZipFile) {
+          formData.append('zipFile', selectedZipFile);
+        }
+        if (selectedCSVFile) {
+          formData.append('csvFile', selectedCSVFile);
+        }
+        if (loc) {
+          formData.append('folder_location', loc);
+        }
+      } else if (activeTab === 'video') {
+        if (selectedVideoFile) {
+          formData.append('videoFile', selectedVideoFile);
+        }
+        if (fps) {
+          formData.append('out_fps', fps);
+        }
+      } else if (activeTab === 'streaming') {
+        formData.append('rtsp_in_url', rtspInUrl);
+        formData.append('rtsp_out_url', rtspOutUrl);
+        formData.append('out_fps', rtspFps);
       }
-      if (selectedVideoFile) {
-        formData.append('videoFile', selectedVideoFile);
-        console.log('Video file added to form data')
-      }
-      if (selectedCSVFile) {
-        formData.append('csvFile', selectedCSVFile);
-        console.log('CSV File Added to form data')
-      }
+
+      // Add universal data
       formData.append('approch', selectedOption);
-      if (loc) {
-        formData.append('folder_location', loc);
-      }
-      if (fps) {
-        formData.append('out_fps', fps);
-      }
 
       console.log(selectedOption, loc, fps)
       const response = await fetch('http://localhost:3001/api/upload', {
@@ -186,6 +213,9 @@ const Home = () => {
         setSelectedZipFile(null)
         setSelectedVideoFile(null) // Also reset video file
         setFPS('') // Reset FPS
+        setRtspInUrl('');
+        setRtspOutUrl('');
+        setRtspFps('');
         setActiveTab('images') // Reset to default tab
 
       }
@@ -270,7 +300,7 @@ const Home = () => {
               className={`nav-link ${activeTab === 'streaming' ? 'active' : ''}`}
               onClick={() => setActiveTab('streaming')}
             >
-              Streaming (Coming Soon)
+              Streaming
             </button>
           </li>
         </ul>
@@ -354,9 +384,45 @@ const Home = () => {
 
           {/* --- STREAMING TAB --- */}
           {activeTab === 'streaming' && (
-            <div className="alert alert-info">
-              <h4>Streaming Input</h4>
-              <p>This feature will be available in a future update.</p>
+            <div>
+              <div className="mb-3">
+                <label htmlFor="rtspInUrl" className="form-label">
+                  Enter the input url of the RTSP stream. It might be in the form: rtsp://localhost:8554/mystream
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  id="rtspInUrl"
+                  onChange={handleRtspInUrlChange}
+                  value={rtspInUrl}
+                />
+              </div>
+
+              <div className="mb-3">
+                <label htmlFor="rtspOutUrl" className="form-label">
+                  Enter the output url of the RTSP stream. It might be in the form: rtsp://localhost:8554/annotated
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  id="rtspOutUrl"
+                  onChange={handleRtspOutUrlChange}
+                  value={rtspOutUrl}
+                />
+              </div>
+
+              <div className="mb-3">
+                <label htmlFor="rtspFps" className="form-label">
+                  Specify the output fps of the stream. If output fps is greater than the input fps, it will be set to the input fps.
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  id="rtspFps"
+                  onChange={handleRtspFpsChange}
+                  value={rtspFps}
+                />
+              </div>
             </div>
           )}
         </div>

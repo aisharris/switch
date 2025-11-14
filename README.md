@@ -36,7 +36,7 @@ The system comprises distinct components, including a frontend written in React,
 
 </details>
 
-#### Requirment's:
+#### Requirement's:
 
 - Install [Docker Engine](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) as standalone binaries.
 - Minimum free space of 7 GB.

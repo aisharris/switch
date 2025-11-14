@@ -173,7 +173,7 @@ async def get_models():
         raise HTTPException(status_code=500, detail="Error getting models")
 
 @app.post("/api/upload")
-async def upload_files(zipFile: UploadFile = File(None), videoFile: UploadFile = File(None), csvFile: UploadFile = File(None),  approch: str = Form(...), folder_location: str = Form(None), out_fps: str = Form(None)):
+async def upload_files(zipFile: UploadFile = File(None), videoFile: UploadFile = File(None), rtsp_in_url: str = Form(None), rtsp_out_url: str = Form(None), csvFile: UploadFile = File(None),  approch: str = Form(...), folder_location: str = Form(None), out_fps: str = Form(None)):
     global sys_approch
     try:
         print(approch)
@@ -219,7 +219,22 @@ async def upload_files(zipFile: UploadFile = File(None), videoFile: UploadFile =
             print("Launching video processor script in background...")
             run_in_terminal(command)
 
-        elif(zipFile is not None):
+        elif (rtsp_in_url is not None):
+            target_output_fps = float(out_fps)
+            # Not saving the RTSP stream since it is a live mechanism
+
+            command = (
+                f'python3 RTSPSwitch.py '
+                f'--input {rtsp_in_url} '
+                f'--output {rtsp_out_url} '
+                f'--fps {target_output_fps} '
+                f'--upgrade_interval {10} '
+            )
+
+            print("Launching RTSP script in background...")
+            run_in_terminal(command)
+
+        elif (zipFile is not None):
             zip_path = os.path.join(upload_dir, zipFile.filename)
             with open(zip_path, "wb") as zf:
                 shutil.copyfileobj(zipFile.file, zf)
@@ -238,7 +253,7 @@ async def upload_files(zipFile: UploadFile = File(None), videoFile: UploadFile =
             IMAGES_FOLDER = folder_location
         # Perform additional logic with the unzipped folder here
 
-        if not videoFile:
+        if (zipFile is not None):
             # Move the CSV file to the unzipped folder
             csv_dest_path = os.path.join(unzip_dir, csvFile.filename)
             shutil.move(csv_path, csv_dest_path)
