@@ -69,7 +69,6 @@ def process_row(im_bytes, total_time):
     if image_format is None:
         return
     current_model = get_current()
-
     
     if current_model in models:
         logger.data( {"User Request Time": total_time , 'model': current_model} )
@@ -184,7 +183,7 @@ def start_processing():
                 logger.data({"Finished Processing File" : total_processed - 1 })
 
             except Exception as e:
-                logger.error(f"Skiping a Image file, processing the next")
+                logger.error(f"Skipping a Image file, processing the next")
                 total_processed += 1
 
         elif len(rows) == 1:

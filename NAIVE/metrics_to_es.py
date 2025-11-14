@@ -16,6 +16,7 @@ def send_to_elasticsearch(data):
         print(data)
         # Send the data to Elasticsearch
         es.index(index=index_name, body=data)
+        
     except Exception as e:
         str = f"Failed to upload metrics data to ES: {str(e)}"
         logger.error(str)
@@ -29,7 +30,7 @@ def process_csv_file():
         with open(csv_file_path, 'r') as file:
 
             if file.read().strip() == '':
-                # print("File is empty. Skipping processing.")
+                print("File is empty. Skipping processing.")
                 return
             file.seek(0)
             reader = csv.reader(file)

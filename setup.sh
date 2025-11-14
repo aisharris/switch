@@ -17,5 +17,5 @@ cd NAIVE
 echo "Installing Python requirements..."
 pip install -r requirements.txt
 
-# echo "Loading Model's"
-# python3 process_model.py
+echo "Loading Model's"
+python3 process_model.py

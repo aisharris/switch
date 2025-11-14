@@ -1,12 +1,12 @@
 import re
 import json
 from datetime import datetime
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, ElasticsearchException
 import time
 from Custom_Logger import logger
 
 # Configure Elasticsearch connection
-es = Elasticsearch(['localhost'])  # Replace with your Elasticsearch host
+es = Elasticsearch(['localhost']) # Replace with your Elasticsearch host
 
 log_file_path = 'logs/Object_detection.log'  # Replace with the actual path to your log file
 
@@ -65,8 +65,11 @@ while True:
             for line in lines:
                 log_entry = parse_log_data(line)
                 if log_entry:
-                    print(log_entry)
-                    es.index(index=index_name, body=log_entry)
+                    # print(log_entry)
+                    try:
+                        es.index(index=index_name, body=log_entry)
+                    except ElasticsearchException as e:
+                        logger.warning("Failed to log to Elasticsearch index")
 
             clear_log_file()
 

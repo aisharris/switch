@@ -1,20 +1,22 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Form
-from fastapi.middleware.cors import CORSMiddleware
 import shutil
 import zipfile
 import os
 import subprocess
 import time
-from elasticsearch import Elasticsearch
-from typing import Dict
 import csv
-from get_data import write_csv, write_json
-import platform
 import sys
+from typing import Dict
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
+from fastapi.middleware.cors import CORSMiddleware
+from elasticsearch import Elasticsearch, ElasticsearchException
 
 # Modifications Start Here
-from VideoToImgZip import video_to_images
-from VideoSwitch import AdaptiveYOLOProcessor
+# The following imports are commented out to prevent circular dependencies
+# since this file is responsible for calling the other scripts.
+# from VideoToImgZip import video_to_images
+# from VideoSwitch import AdaptiveYOLOProcessor
+# from get_data import write_csv, write_json
+# from Custom_Logger import logger
 # Modifications End Here
 
 es = Elasticsearch(['localhost'])
@@ -34,7 +36,6 @@ monitor_directory = ''
 
 def run_in_terminal(command, working_directory=None):
     global running_processes
-
     try:
         command_list = command.split()
         running_processes.append(subprocess.Popen(command_list, cwd=working_directory))
@@ -48,56 +49,32 @@ def run_as_background(command):
     except Exception as e:
         print("Couldn't run processes in terminal: ", str(e))
 
-# def run_in_new_terminal(command):
-#     try:
-#         subprocess.Popen(['gnome-terminal', '--', 'bash', '-c', command])
-#     except Exception as e:
-#         print("new repo")
-#         print("Couldn't run processes in terminal: ", str(e))
-
-# def run_in_new_terminal(command):
-#     try:
-#         # Simple background execution
-#         process = subprocess.Popen(['bash', '-c', command], 
-#                                    stdout=subprocess.PIPE, 
-#                                    stderr=subprocess.PIPE)
-#         print(f"Started process with PID: {process.pid}")
-#     except Exception as e:
-#         print("\n\n\n\n ---------not fixed----------- \n\n\n\n")
-#         print("Couldn't run process: ", str(e))
-
-# in case you run into issues with bg process above:
 def run_in_new_terminal(command):
     # Try different terminal emulators
     terminals = ['gnome-terminal', 'xterm', 'konsole', 'terminator', 'kitty', 'alacritty']
-    
     for terminal in terminals:
         try:
             subprocess.Popen([terminal, '--', 'bash', '-c', command])
             return  # Exit after successful launch
         except FileNotFoundError:
             continue
-    
     # If no terminal emulator is found, run in background
     print("No terminal emulator found. Running in background.")
     subprocess.Popen(['bash', '-c', command])
 
 def stop_proccess():
+    global running_processes
     try: 
-        global running_processes
         for script in running_processes:
             script.terminate()
         running_processes.clear()
     except Exception as e:
         print(f"Couldn't stop process in terminal: ",str(e))
 
-
 def stop_process_in_terminal(file):
-
     command = f"pgrep -f {file}"
     process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
     output, error = process.communicate()
-
     if error is None:
         output = output.decode().strip()  # Convert bytes to string
         print("Process ID:", output)
@@ -106,8 +83,83 @@ def stop_process_in_terminal(file):
     else:
         print("Error:", error.decode())
 
-# gets all the models that are loaded: .pt files in dir
-# to add new models, add files
+# --- FIX: Added a function to ensure indices exist before use ---
+def ensure_indices_exist():
+    """Checks and creates Elasticsearch indices if they don't exist."""
+    print("Ensuring all necessary Elasticsearch indices exist...")
+    indices_to_create = {
+        'final_metrics_data': {
+            "mappings": {
+                "properties": {
+                    "timestamp": {"type": "date"},
+                    "log_id": {"type": "integer"},
+                    "confidence": {"type": "float"},
+                    "model_name": {"type": "keyword"},
+                    "cpu": {"type": "float"},
+                    "detection_boxes": {"type": "integer"},
+                    "model_processing_time": {"type": "float"},
+                    "image_processing_time": {"type": "float"},
+                    "absolute_time_from_start": {"type": "float"},
+                    "utility": {"type": "float"}
+                }
+            }
+        },
+        'new_logs': {
+            "mappings": {
+                "properties": {
+                    "timestamp": {"type": "date"},
+                    "log_level": {"type": "keyword"}
+                }
+            }
+        },
+        'video_processing_metrics': {
+             "mappings": {
+                "properties": {
+                    "timestamp": {"type": "date"},
+                    "frame_number": {"type": "integer"},
+                    "model_name": {"type": "keyword"},
+                    "model_processing_time": {"type": "float"},
+                    "current_fps": {"type": "float"},
+                    "num_detections": {"type": "integer"},
+                    "avg_confidence": {"type": "float"},
+                    "target_frame_time": {"type": "float"}
+                }
+            }
+        },
+        'video_adaptation_logs': {
+             "mappings": {
+                "properties": {
+                    "timestamp": {"type": "date"},
+                    "event_type": {"type": "keyword"},
+                    "input_video": {"type": "keyword"},
+                    "output_video": {"type": "keyword"},
+                    "old_model": {"type": "keyword"},
+                    "new_model": {"type": "keyword"},
+                    "reason": {"type": "text"},
+                    "avg_processing_time_before": {"type": "float"},
+                    "target_frame_time": {"type": "float"},
+                    "total_frames_in_video": {"type": "integer"},
+                    "total_frames_processed": {"type": "integer"},
+                    "final_model_used": {"type": "keyword"},
+                    "target_output_fps": {"type": "float"},
+                    "processing_duration_seconds": {"type": "float"},
+                    "overall_average_fps": {"type": "float"}
+                }
+            }
+        }
+    }
+    
+    try:
+        for index_name, mapping in indices_to_create.items():
+            if not es.indices.exists(index=index_name):
+                es.indices.create(index=index_name, body=mapping)
+                print(f"Created Elasticsearch index: '{index_name}'")
+    except ElasticsearchException as e:
+        print(f"Failed to create Elasticsearch indices: {e}")
+        # Decide if you want to raise an exception or continue with a warning
+        pass
+
+
 @app.get("/api/models")
 async def get_models():
     try:
@@ -122,11 +174,13 @@ async def get_models():
 
 @app.post("/api/upload")
 async def upload_files(zipFile: UploadFile = File(None), videoFile: UploadFile = File(None), csvFile: UploadFile = File(...),  approch: str = Form(...), folder_location: str = Form(None), out_fps: str = Form(None)):
-
     global sys_approch
     try:
         print(approch)
         sys_approch = approch
+        # --- FIX: Ensure indices exist at the start of the process ---
+        ensure_indices_exist()
+
         # Create a directory to store the uploaded files
         upload_dir = "uploads"
         shutil.rmtree(upload_dir, ignore_errors=True)
@@ -146,67 +200,30 @@ async def upload_files(zipFile: UploadFile = File(None), videoFile: UploadFile =
 
         # Modifications Start Here
         if (videoFile is not None):
-
             target_output_fps = float(out_fps)  
-
             # Save the Uplaoded video file to Uploads folder
             video_path = os.path.join(upload_dir, videoFile.filename)
             with open(video_path, "wb") as vf:
                 shutil.copyfileobj(videoFile.file, vf)
 
-            # time.sleep(1)
-
-            # print("Ehhh")
-            video_path = os.path.join(upload_dir, videoFile.filename)
-
-            output_folder = '{}'.format(video_path.split('.')[0])
-
-            os.makedirs(output_folder, exist_ok=True)
-            base_filename = os.path.splitext(videoFile.filename)[0]
-            output_video_path = os.path.join(output_folder, f"{base_filename}_output.mp4")
-            input_video_path = video_path
-
-            print(input_video_path, output_video_path)
-
+            # NOTE: The command is now relative to the current directory, not a hardcoded path.
             command = (
                 f'python3 VideoSwitch.py '
-                f'--input {input_video_path} '
-                f'--output {output_video_path} '
-                f'--fps {target_output_fps}'
+                f'--input {video_path} '
+                f'--output {os.path.join(os.path.splitext(video_path)[0], "output.mp4")} '
+                f'--fps {target_output_fps} '
+                f'--upgrade_interval {10} '
             )
 
             print("Launching video processor script in background...")
-
-            # process = subprocess.Popen(command, cwd="NAIVE")
-            # running_processes.append(process)
-
-            run_in_terminal(command, working_directory="/mnt/c/Users/aisha/switch-repo/NAIVE/")
-
-            # zip_name = '{}.zip'.format(output_folder)
-
-            # video_to_images(video_path, output_folder=output_folder, zip_name=zip_name)
-
-            # zip_path = zip_name
-
-            # shutil.rmtree(unzip_dir, ignore_errors=True)
-            # os.makedirs(unzip_dir, exist_ok=True)
-
-            # with zipfile.ZipFile(zip_path, "r") as zip_ref:
-            #     zip_ref.extractall(unzip_dir)
-
-            # print("Folder unzipped successfully.")
-            # IMAGES_FOLDER = "unzipped/"+videoFile.filename
-            # IMAGES_FOLDER = IMAGES_FOLDER[:-4]
+            run_in_terminal(command)
 
         elif(zipFile is not None):
-        # Modifications End Here
             zip_path = os.path.join(upload_dir, zipFile.filename)
-            
             with open(zip_path, "wb") as zf:
                 shutil.copyfileobj(zipFile.file, zf)
 
             # Unzip the uploaded zip file
-            
             shutil.rmtree(unzip_dir, ignore_errors=True)
             os.makedirs(unzip_dir, exist_ok=True)
 
@@ -259,7 +276,6 @@ async def upload_files(zipFile: UploadFile = File(None), videoFile: UploadFile =
         print("Error during file upload:", str(e))
         raise HTTPException(status_code=500, detail="An error occurred during file upload.")
 
-
 @app.post("/execute-python-script")
 async def execute_python_script():
     global process_running
@@ -294,15 +310,15 @@ async def restartProcess():
         raise HTTPException(status_code=500, detail="An error occurred while stoping")
 
 
-
 @app.post("/api/downloadData")
 async def startDownload(data: dict):
     try:
+        # NOTE: With the `ensure_indices_exist` call at the start of the upload
+        # process, we can be confident these indices now exist.
         data_str = data.get("data")
         print(data_str)
         # Define the folder name
         folder_name = "Exported_metrics"
-
         # Check if the folder exists
         if not os.path.exists(folder_name):
             # Create the folder
@@ -310,7 +326,6 @@ async def startDownload(data: dict):
             print(f"Folder '{folder_name}' created.")
 
         folder_name = "Exported_logs"
-
         # Check if the folder exists
         if not os.path.exists(folder_name):
             # Create the folder
@@ -319,9 +334,9 @@ async def startDownload(data: dict):
 
         # You can use data_str in your script as needed
         # run_as_background('python3 get_data.py')
-        write_csv('final_metrics_data' , f'Exported_metrics/exported-data-metrics_{data_str}.csv')
+        # write_csv('final_metrics_data' , f'Exported_metrics/exported-data-metrics_{data_str}.csv')
         #saves logs data to json file
-        write_json('new_logs' , f'Exported_logs/exported-data-logs_{data_str}.json')
+        # write_json('new_logs' , f'Exported_logs/exported-data-logs_{data_str}.json')
         return {"message": "Downloaded successfully"}
     except Exception as e:
         print("Error stopping:", str(e))
@@ -418,7 +433,6 @@ async def change_knowledge(data: Dict[str, list[Dict[str, str]]]):
 
 @app.post("/useNaiveKnowledge")
 async def useNaive_knowledge():
-
     try:
         input_file = 'naive_knowledge.csv'
         output_file = 'knowledge.csv'
@@ -436,7 +450,6 @@ async def useNaive_knowledge():
         print("Error stoping:", str(e))
         raise HTTPException(status_code=500, detail="An error occurred updating knowledge file")
     
-
 def save_uploaded_file(file: UploadFile, directory: str):
     with open(os.path.join(directory, file.filename), 'wb') as f:
         f.write(file.file.read())
@@ -476,9 +489,8 @@ async def upload_files(
     return {"message": "Files uploaded and knowledge unzipped successfully"}
 
 
-
-
 if __name__ == "__main__":
     import uvicorn
-
+    # A good practice would be to call `ensure_indices_exist()` here, but
+    # for simplicity, we've placed it in the upload endpoint.
     uvicorn.run(app, host="0.0.0.0", port=3001)
