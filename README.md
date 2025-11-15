@@ -343,6 +343,46 @@ Ensure that the code files adhere to the specified guidelines for seamless integ
 
 </details>
 
+### Uploading Videos
+
+Videos do not require an inter-arrival rate file, and can be uploaded as is. An output target fps must be set for the inference to be targeted. This output fps cannot be greater than the input fps of the video, and must not be negative. Switching is performed based on how much faster we are performing the computation on average, and with respect to the target output fps.
+
+### RTSP Streams
+
+RTSP Streams, like videos, do not require an inter-arrival rate file. They require an input stream path, an output stream path, and the target output fps for inference. RTSP footage is taken in from the input path and sent, annotated, to the ouput stream with the targeted fps.
+
+<details>
+<summary><b>Testing RTSP Streams</b></summary>
+
+---
+
+In order to test RTSP footage, you must host a stream of your own.
+
+This can be done using a mediamtx server hosted with docker. The below command opens port 8554 for listening to the stream.
+
+```
+sudo docker run --rm -it -p 8554:8554 bluenviron/mediamtx
+```
+
+Then using a test input file (.mp4 used as example), the video can be streamed to this port in rtsp format. This requires the use of ffmpeg, which can be installed as follows:
+
+```
+sudo apt install ffmpeg
+```
+
+The following command will send the rtsp stream to the port of your choice, in this case, to rtsp://localhost:8554/mystream:
+
+```
+ffmpeg -re -stream_loop -1 -i trim.mp4 -c copy -f rtsp -rtsp_transport tcp rtsp://localhost:8554/mystream
+```
+
+In order to visualise the stream, VLC media player is an option. By selecting Media -> Open Network Stream and entering the path to your stream (as above), the output and input can be seen.
+
+</details>
+
+As of now, the algorithms used for switching in Video and RTSP are Naive. They can be fine tuned by accessing the files ```VideoSwitch.py``` and ```RTSPSwitch.py``` respectively. Support for other methods must be included.
+
+
 ## Stopping the Application
 
 To stop the application, the associated processes executing in each of the three designated terminals must be stopped. This involves the cessation of the 'Docker-compose' process in the first terminal, the termination of the 'Node.py' script in the second terminal, and the halting of the 'frontend' process in the third terminal. This can be done by pressing `Ctrl+C` in each terminal
